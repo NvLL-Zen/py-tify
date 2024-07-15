@@ -93,7 +93,7 @@ with sync_playwright() as p:
         full_url = f"https://{full_url}"
     
     print("[!] Scanning playlist")
-    browser = p.chromium.launch(headless=True, slow_mo=50)
+    browser = p.webkit.launch(headless=True, slow_mo=50)
     page = browser.new_page()
     page.goto(full_url)
     time.sleep(1)
