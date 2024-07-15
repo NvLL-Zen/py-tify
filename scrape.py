@@ -1,9 +1,7 @@
 # Spot-Scrape by Nvll-Zen
-import time, os, yt_dlp
+import os, yt_dlp, time
 from playwright.sync_api import sync_playwright, TimeoutError
 
-import os
-import yt_dlp
 
 def intro():
     intro_str = """
@@ -75,56 +73,54 @@ songs_list = []
 artist_list = []
 # https://open.spotify.com/playlist/6zLxVj27rt8fnBvDdFRlVr?si=KjeGrj9qSwu-INlMvWwGFg
 
-with sync_playwright() as p:
-    intro()
-    print("[HELLO] Welcome to py-tify!")
-    playlist_regex = "open.spotify.com/playlist/"
-    while True:
-        full_url = input("Please input the spotify playlist link: ")
-        if full_url[7:33] == playlist_regex or full_url[8:34] == playlist_regex or full_url[0:26] == playlist_regex:
-            if len(full_url) > 26:
-                break
-        else:
-            print("[X] Incorrect link")
+intro()
+print("[HELLO] Welcome to py-tify!")
+playlist_regex = "open.spotify.com/playlist/"
+while True:
+    full_url = input("Please input the spotify playlist link: ")
+    if full_url[7:33] == playlist_regex or full_url[8:34] == playlist_regex or full_url[0:26] == playlist_regex:
+        if len(full_url) > 26:
+            break
+    else:
+        print("[X] Incorrect link")
+if full_url.startswith("http://"):
+        full_url = f"https://{full_url[7:]}"
+if not full_url.startswith("https://"):
+    full_url = f"https://{full_url}"
 
-    if full_url.startswith("http://"):
-            full_url = f"https://{full_url[7:]}"
-    if not full_url.startswith("https://"):
-        full_url = f"https://{full_url}"
-    
-    print("[!] Scanning playlist")
-    browser = p.webkit.launch(headless=True, slow_mo=50)
-    page = browser.new_page()
-    page.goto(full_url)
-    time.sleep(1)
-    
-    iteration = 0
-    while True:
-        iteration += 1
+p = sync_playwright().start()
+print("[!] Scanning playlist")
+browser = p.chromium.launch(headless=True, slow_mo=50)
+page = browser.new_page()
+page.goto(full_url)
+
+iteration = 0
+while True:
+    iteration += 1
+    try:
+        song_title = page.locator(f"xpath={div_xpath}[{iteration}]{title_xpath}{song_title_xpath}")
+        artist_title = page.locator(f"xpath={div_xpath}[{iteration}]{title_xpath}{artist_title_xpath}")
+        
+        # Wait for the elements to be available
+        song_title.wait_for(timeout=3000)
+        artist_title.wait_for(timeout=3000)
+        
+        songs_list.append(song_title.inner_html())
+        artist_list.append(artist_title.inner_html())
+    except (TimeoutError, Exception):
         try:
-            song_title = page.locator(f"xpath={div_xpath}[{iteration}]{title_xpath}{song_title_xpath}")
-            artist_title = page.locator(f"xpath={div_xpath}[{iteration}]{title_xpath}{artist_title_xpath}")
+            artist_title_locator = f"xpath={div_xpath}[{iteration}]{title_xpath}{artist_title_xpath}[1]"
+            artist_title = page.locator(artist_title_locator)
             
-            # Wait for the elements to be available
-            song_title.wait_for(timeout=3000)
+            # Wait for the fallback element to be available
             artist_title.wait_for(timeout=3000)
             
             songs_list.append(song_title.inner_html())
             artist_list.append(artist_title.inner_html())
         except (TimeoutError, Exception):
-            try:
-                artist_title_locator = f"xpath={div_xpath}[{iteration}]{title_xpath}{artist_title_xpath}[1]"
-                artist_title = page.locator(artist_title_locator)
-                
-                # Wait for the fallback element to be available
-                artist_title.wait_for(timeout=3000)
-                
-                songs_list.append(song_title.inner_html())
-                artist_list.append(artist_title.inner_html())
-            except (TimeoutError, Exception):
-                break
-    
-    browser.close()
+            break
+
+browser.close()
 
 checkQuery()
 
