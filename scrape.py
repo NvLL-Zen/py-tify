@@ -1,6 +1,7 @@
 import time
 import os
 import yt_dlp
+import imageio_ffmpeg
 from playwright.sync_api import sync_playwright, TimeoutError
 
 def intro():
@@ -26,12 +27,13 @@ def search_youtube(query):
     return result['entries']
 
 def download_audio_as_mp3(url, output_folder='output', custom_filename=None):
-    # Ensure the output folder exists
+
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
     output_path = os.path.join(output_folder, custom_filename)
-    
+    ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+
     ydl_opts = {
         'format': 'bestaudio/best',
         'outtmpl': output_path,
@@ -40,9 +42,8 @@ def download_audio_as_mp3(url, output_folder='output', custom_filename=None):
             'preferredcodec': 'mp3',
             'preferredquality': '192',
         }],
-        'postprocessor_args': ['-ar', '44100'],
-        'prefer_ffmpeg': True,
-        'quiet': True  # Set to True to suppress informational messages
+        'ffmpeg_location': ffmpeg_path,
+        'quiet': True 
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -77,7 +78,8 @@ with sync_playwright() as p:
     print("[HELLO] Welcome to py-tify!")
     playlist_regex = "open.spotify.com/playlist/"
     while True:
-        full_url = input("Please input the spotify playlist link: ")
+        print("[!] Please make sure the playlist is set to public")
+        full_url = input("[?] Please input the spotify playlist link: ")
         if full_url[7:33] == playlist_regex or full_url[8:34] == playlist_regex or full_url[0:26] == playlist_regex:
             if len(full_url) > 26:
                 break
@@ -90,7 +92,7 @@ with sync_playwright() as p:
         full_url = f"https://{full_url}"
     
     print("[!] Scanning playlist")
-    browser = p.chromium.launch(headless=True)
+    browser = p.chromium.launch(headless=False)
     page = browser.new_page()
     page.goto(full_url)
     time.sleep(1)
